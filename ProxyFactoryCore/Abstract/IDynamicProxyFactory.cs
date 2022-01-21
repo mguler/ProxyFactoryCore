@@ -9,5 +9,6 @@ namespace ProxyFactoryCore.Abstract
         T Create<T>();
         object Create<T>(object obj);
         void Add<T>(IInterceptorConfiguration<T> interceptorConfiguration);
+        Type GetProxyType<T>();
     }
 }

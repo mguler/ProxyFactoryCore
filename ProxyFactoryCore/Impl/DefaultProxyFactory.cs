@@ -58,5 +58,16 @@ namespace ProxyFactoryCore.Impl
             var proxyInstance = interceptorConfiguration.ProxyType.GetConstructor(Type.EmptyTypes).Invoke(null);
             return (T)proxyInstance;
         }
+
+        public Type GetProxyType<T>()
+        {
+            var interceptorConfiguration = _cache.SingleOrDefault(interceptorConfiguration => interceptorConfiguration.Key == typeof(T)).Value
+                as IInterceptorConfiguration<T>;
+            if (interceptorConfiguration.ProxyType == null)
+            {
+                interceptorConfiguration.ProxyType = Build(interceptorConfiguration);
+            }
+            return interceptorConfiguration.ProxyType;
+        }
     }
 }
