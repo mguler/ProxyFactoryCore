@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ProxyFactoryCore.Impl;
 using ProxyFactoryCore.Tests.Interceptors;
+using ProxyFactoryCore.Tests.TestClasses;
 
 namespace ProxyFactoryCore.Tests
 {
@@ -23,6 +24,14 @@ namespace ProxyFactoryCore.Tests
             var controllerTest2 = proxyFactory.Create<Controller2>();
             var result = controllerTest2.AddtoCart("Potato", 10);
 
+        }
+
+        [TestMethod]
+        public void ConstructorOverload()
+        {
+            var proxyFactory = new DefaultProxyFactory();
+            proxyFactory.Register<ControllerWithConstructorOverload>();
+            var proxyType = proxyFactory.Create<ControllerWithConstructorOverload>(new ComplexType1(), 99, new ComplexType2(), "");
         }
     }
 }

@@ -7,27 +7,35 @@ using System.Reflection.Emit;
 
 namespace ProxyFactoryCore.Impl
 {
-    public class DerivedProxyBuilder: IProxyBuilder
+    public class DerivedProxyBuilder : IProxyBuilder
     {
+        private readonly AssemblyBuilder _assemblyBuilder;
+        private readonly ModuleBuilder _moduleBuilder;
+        private TypeBuilder _typeBuilder;
+        private Type _baseType;
+        public DerivedProxyBuilder()
+        {
+            _assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
+            _moduleBuilder = _assemblyBuilder.DefineDynamicModule(Guid.NewGuid().ToString());
+        }
         public Type CreateProxyType<T1>(IInterceptorConfiguration config)
         {
             return CreateProxyType(typeof(T1), config);
         }
         public Type CreateProxyType(Type baseType, IInterceptorConfiguration config)
         {
-            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
-            var moduleBuilder = assemblyBuilder.DefineDynamicModule(Guid.NewGuid().ToString());
-            var typeBuilder = moduleBuilder.DefineType($"{baseType.FullName}Proxy", baseType.Attributes, baseType);
+            _baseType = baseType;
+            _typeBuilder = _moduleBuilder.DefineType($"{_baseType.FullName}Proxy", _baseType.Attributes, _baseType);
             var before = typeof(IInterceptor).GetMethod("BeforeExecution", new Type[] { typeof(InvocationInfo) });
             var after = typeof(IInterceptor).GetMethod("AfterExecution", new Type[] { typeof(InvocationInfo) });
             var parameters = typeof(Dictionary<string, object>).GetConstructor(new Type[0]);
             var addParameter = typeof(Dictionary<string, object>).GetMethod("Add", new Type[] { typeof(string), typeof(object) });
             var getMethod = typeof(Type).GetMethod("GetMethod", new Type[] { typeof(string) });
             var typeFromRuntimeHandle = typeof(Type).GetMethod("GetTypeFromHandle");
-            var methods = baseType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+            var methods = _baseType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
             var interceptorCache = typeof(List<IInterceptor>).GetConstructor(Type.EmptyTypes);
             var addInterceptor = typeof(List<IInterceptor>).GetMethod("Add", new Type[] { typeof(IInterceptor) });
-            var invocationInfo = typeof(InvocationInfo).GetConstructor(new Type[] { typeof(object), typeof(object), typeof(MethodInfo), typeof(Dictionary<string,object>) });
+            var invocationInfo = typeof(InvocationInfo).GetConstructor(new Type[] { typeof(object), typeof(object), typeof(MethodInfo), typeof(Dictionary<string, object>) });
             var setResult = typeof(InvocationInfo).GetProperty("Result").GetSetMethod();
             var getResult = typeof(InvocationInfo).GetProperty("Result").GetGetMethod();
             var isCancelled = typeof(InvocationInfo).GetField("_cancelExecution", BindingFlags.Public | BindingFlags.Instance);
@@ -53,7 +61,7 @@ namespace ProxyFactoryCore.Impl
                     continue;
                 }
 
-                var derivedMethodBuilder = typeBuilder.DefineMethod(methodInfo.Name
+                var derivedMethodBuilder = _typeBuilder.DefineMethod(methodInfo.Name
                     , MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final
                     , methodInfo.CallingConvention
                     , methodInfo.ReturnType
@@ -177,7 +185,7 @@ namespace ProxyFactoryCore.Impl
                 // Load index value into the stack
                 ilGenerator.Emit(OpCodes.Ldloc, 4);
                 //Load the interceptor at Current index into the stack
-                ilGenerator.Emit(OpCodes.Call , getItem);
+                ilGenerator.Emit(OpCodes.Call, getItem);
                 ilGenerator.Emit(OpCodes.Stloc, 5);
                 ilGenerator.Emit(OpCodes.Ldloc, 5);
                 //Load invocation info into the stack
@@ -240,7 +248,7 @@ namespace ProxyFactoryCore.Impl
                 //Load Interceptor Cache Into Memory
                 ilGenerator.Emit(OpCodes.Ldloc_0);
                 //Count Of Interceptors in Cache
-                ilGenerator.Emit(OpCodes.Call , getCount);
+                ilGenerator.Emit(OpCodes.Call, getCount);
                 // Load Index Value Into The Stack
                 ilGenerator.Emit(OpCodes.Ldloc, 4);
                 //Compare CurrentIndex And Interceptor Count In The Cache If Index Value Less Than Interceptor Count 
@@ -285,7 +293,7 @@ namespace ProxyFactoryCore.Impl
                 // save the variable at loc 4
                 ilGenerator.Emit(OpCodes.Stloc, 4);
                 // Go to Index Check 
-                ilGenerator.Emit(OpCodes.Br_S, loop2IndexCheck); 
+                ilGenerator.Emit(OpCodes.Br_S, loop2IndexCheck);
                 /* Begin To Loop2 */
                 ilGenerator.MarkLabel(loop2Begin);
 
@@ -367,12 +375,52 @@ namespace ProxyFactoryCore.Impl
 
                 ilGenerator.MarkLabel(finish);
 
-
                 ilGenerator.Emit(OpCodes.Ret);
 
-                typeBuilder.DefineMethodOverride(derivedMethodBuilder, methodInfo);
+                _typeBuilder.DefineMethodOverride(derivedMethodBuilder, methodInfo);
             }
-            return typeBuilder.CreateType();
+            OverrideConstructors();
+            return _typeBuilder.CreateType();
+        }
+        private void OverrideConstructors()
+        {
+            var constructors = _baseType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (var constructorInfo in constructors)
+            {
+
+                var constructorBuilder = _typeBuilder.DefineConstructor(constructorInfo.Attributes
+                 , constructorInfo.CallingConvention
+                 , constructorInfo.GetParameters().Select(parameter => parameter.ParameterType).ToArray()
+                 , constructorInfo.GetParameters().Select(parameter => parameter.GetRequiredCustomModifiers()).ToArray()
+                 , constructorInfo.GetParameters().Select(parameter => parameter.GetOptionalCustomModifiers()).ToArray());
+
+                var constructorParameters = constructorInfo.GetParameters().ToArray();
+                var ilGenerator = constructorBuilder.GetILGenerator();
+
+                for (var parameterIndex = 0; parameterIndex < constructorParameters.Length; parameterIndex++)
+                {
+                    var methodParameter = constructorParameters[parameterIndex];
+                    var derivedMethodParameterBuilder = constructorBuilder.DefineParameter(parameterIndex + 1,
+                        ParameterAttributes.None,
+                        methodParameter.Name);
+                }
+
+                #region Prepare The Invocation Info
+                //Load current instance "this"
+                ilGenerator.Emit(OpCodes.Ldarg_0);
+
+                for (var parameterIndex = 0; parameterIndex < constructorParameters.Length; parameterIndex++)
+                {
+                    //Load current instance "this"
+                    ilGenerator.Emit(OpCodes.Ldarg, parameterIndex + 1);
+                }
+                //Create the InvcationInfo Instance
+                #endregion End Of Prepare The Invocation Info
+
+                ilGenerator.Emit(OpCodes.Call, constructorInfo);
+                ilGenerator.Emit(OpCodes.Ret);
+            }
         }
     }
 }

@@ -15,22 +15,15 @@ namespace ProxyFactoryCore.Impl
             return interceptionConfiguration;
         }
 
-        public T Create<T>()
+        public T Create<T>(params object[] args)
         {
             var interceptorConfiguration = _cache.SingleOrDefault(interceptorConfiguration => interceptorConfiguration.Key == typeof(T)).Value
                 as IInterceptorConfiguration<T>;
 
-            var instance = Create(interceptorConfiguration);
+            var instance = Create(interceptorConfiguration, args);
             return instance;
         }
-        public object Create<T>(object obj)
-        {
-            var interceptorConfiguration = _cache.SingleOrDefault(interceptorConfiguration => interceptorConfiguration.Key == typeof(T)).Value
-                as IInterceptorConfiguration<T>;
-
-            var instance = Create(interceptorConfiguration);
-            return instance;
-        }
+        public object Create<T>(object obj) => throw new NotImplementedException();
         public void Add<T>(IInterceptorConfiguration<T> interceptorConfiguration)
         {
             _cache.Add(typeof(T), interceptorConfiguration);
@@ -48,14 +41,16 @@ namespace ProxyFactoryCore.Impl
             var proxyType = proxyBuilder.CreateProxyType(typeof(T),interceptorConfiguration);
             return proxyType;
         }
-        internal T Create<T>(IInterceptorConfiguration<T> interceptorConfiguration)
+        internal T Create<T>(IInterceptorConfiguration<T> interceptorConfiguration, params object[] args)
         {
+            var argumentTypes = args.Select(arg => arg.GetType()).ToArray();
+
             if (interceptorConfiguration.ProxyType == null)
             {
                 interceptorConfiguration.ProxyType = Build(interceptorConfiguration);
             }
 
-            var proxyInstance = interceptorConfiguration.ProxyType.GetConstructor(Type.EmptyTypes).Invoke(null);
+            var proxyInstance = interceptorConfiguration.ProxyType.GetConstructor(argumentTypes).Invoke(args);
             return (T)proxyInstance;
         }
 
