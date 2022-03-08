@@ -377,6 +377,15 @@ namespace ProxyFactoryCore.Impl
 
                 ilGenerator.MarkLabel(finish);
 
+                if (methodInfo.ReturnType == typeof(void))
+                {
+                    ilGenerator.Emit(OpCodes.Pop);
+                }
+                else if (methodInfo.ReturnType.IsPrimitive)
+                {
+                    ilGenerator.Emit(OpCodes.Unbox_Any, methodInfo.ReturnType);
+                }
+
                 ilGenerator.Emit(OpCodes.Ret);
 
                 _typeBuilder.DefineMethodOverride(derivedMethodBuilder, methodInfo);
