@@ -2,13 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace ProxyFactoryCore.Impl
 {
     public class DefaultProxyFactory:IDynamicProxyFactory
     {
         private readonly Dictionary<Type, IInterceptorConfiguration> _cache = new Dictionary<Type, IInterceptorConfiguration>();
-
         public IInterceptorConfiguration<T> Register<T>()
         {
             var interceptionConfiguration = new InterceptionConfiguration<T>(this);
@@ -38,7 +38,7 @@ namespace ProxyFactoryCore.Impl
             var proxyBuilder = interceptorConfiguration.ProxyBuilderType.GetConstructor(Type.EmptyTypes)
                 .Invoke(null) as IProxyBuilder;
 
-            var proxyType = proxyBuilder.CreateProxyType(typeof(T),interceptorConfiguration);
+            var proxyType = proxyBuilder.CreateProxyType(typeof(T), interceptorConfiguration);
             return proxyType;
         }
         internal T Create<T>(IInterceptorConfiguration<T> interceptorConfiguration, params object[] args)

@@ -15,9 +15,10 @@ namespace ProxyFactoryCore.Impl
         private Type _baseType;
         public DerivedProxyBuilder()
         {
-            _assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
+            _assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Assembly.GetExecutingAssembly().FullName), AssemblyBuilderAccess.RunAndCollect);
             _moduleBuilder = _assemblyBuilder.DefineDynamicModule(Guid.NewGuid().ToString());
         }
+
         public Type CreateProxyType<T1>(IInterceptorConfiguration config)
         {
             return CreateProxyType(typeof(T1), config);
@@ -92,6 +93,7 @@ namespace ProxyFactoryCore.Impl
                 ilGenerator.DeclareLocal(typeof(int));
                 ilGenerator.DeclareLocal(typeof(IInterceptor));
                 ilGenerator.DeclareLocal(typeof(object));
+                ilGenerator.DeclareLocal(typeof(object));
 
                 var cancel = ilGenerator.DefineLabel();
                 var bypassAfter = ilGenerator.DefineLabel();
@@ -117,8 +119,8 @@ namespace ProxyFactoryCore.Impl
                 }
                 #endregion End Of Create Interceptor Instances 
 
-                #region Get info of base method 
-                ilGenerator.Emit(OpCodes.Ldtoken, baseType);
+                    #region Get info of base method 
+                    ilGenerator.Emit(OpCodes.Ldtoken, baseType);
                 ilGenerator.Emit(OpCodes.Call, typeFromRuntimeHandle);
                 ilGenerator.Emit(OpCodes.Ldstr, methodInfo.Name);
                 ilGenerator.Emit(OpCodes.Call, getMethod);
