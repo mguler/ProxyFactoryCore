@@ -1,33 +1,29 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ProxyFactoryCore.Impl;
 using ProxyFactoryCore.Tests.Interceptors;
 using ProxyFactoryCore.Tests.TestClasses;
+using ProxyFactoryCore.Tests.TestClasses.Interceptors;
 using System.Runtime;
+
 namespace ProxyFactoryCore.Tests
 {
     [TestClass]
-    public class UnitTest1
+    public class ExceptionHandlingTest
     {
-        [TestMethod("Should be intercepted and returns null")]
-        public void Interception()
+        [TestMethod]
+        public void HandleException()
         {
             var proxyFactory = new DefaultProxyFactory();
 
-            proxyFactory.Register<Controller2>()
-                .Intercept(type => type.AddtoCart(default,default))
-                .With<Interceptor1>()
-                .With<Interceptor2>()
-                .With<Interceptor3>()
-                .Intercept(type => type.Pay(default))
-                .With<Interceptor4>();
+            proxyFactory.Register<Controller2>().Intercept(type => type.AddtoCart(default, default))
+                .With<InterceptorThrowsException>();
 
             var controllerTest2 = proxyFactory.Create<Controller2>();
             var result = controllerTest2.AddtoCart("Test", 10);
         }
 
-
-        [TestMethod("Should")]
-        public void ConstructorOverload()
+        [TestMethod]
+        public void HandleSpecificException()
         {
             var proxyFactory = new DefaultProxyFactory();
             proxyFactory.Register<ControllerWithConstructorOverload>();

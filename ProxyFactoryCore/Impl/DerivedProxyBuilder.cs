@@ -31,7 +31,7 @@ namespace ProxyFactoryCore.Impl
             var after = typeof(IInterceptor).GetMethod("AfterExecution", new Type[] { typeof(InvocationInfo) });
             var parameters = typeof(Dictionary<string, object>).GetConstructor(new Type[0]);
             var addParameter = typeof(Dictionary<string, object>).GetMethod("Add", new Type[] { typeof(string), typeof(object) });
-            var getMethod = typeof(Type).GetMethod("GetMethod", new Type[] { typeof(string) });
+            var getMethod = typeof(Type).GetMethod("GetMethod", new Type[] { typeof(string) ,typeof(Type[]) });
             var typeFromRuntimeHandle = typeof(Type).GetMethod("GetTypeFromHandle");
             var methods = _baseType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
             var interceptorCache = typeof(List<IInterceptor>).GetConstructor(Type.EmptyTypes);
@@ -94,6 +94,7 @@ namespace ProxyFactoryCore.Impl
                 ilGenerator.DeclareLocal(typeof(IInterceptor));
                 ilGenerator.DeclareLocal(typeof(object));
                 ilGenerator.DeclareLocal(typeof(object));
+                ilGenerator.DeclareLocal(typeof(Type[]));
 
                 var cancel = ilGenerator.DefineLabel();
                 var bypassAfter = ilGenerator.DefineLabel();
@@ -119,10 +120,27 @@ namespace ProxyFactoryCore.Impl
                 }
                 #endregion End Of Create Interceptor Instances 
 
-                    #region Get info of base method 
-                    ilGenerator.Emit(OpCodes.Ldtoken, baseType);
+
+                #region Get info of base method 
+                if (methodParameters.Any())
+                {
+                    ilGenerator.Emit(OpCodes.Ldc_I4, methodParameters.Length);
+                    ilGenerator.Emit(OpCodes.Newarr, typeof(Type));
+                    ilGenerator.Emit(OpCodes.Stloc, 8);
+
+                    for (var index = 0; index < methodParameters.Length; index++)
+                    {
+                        ilGenerator.Emit(OpCodes.Ldloc, 8);
+                        ilGenerator.Emit(OpCodes.Ldc_I4, index);
+                        ilGenerator.Emit(OpCodes.Ldtoken, methodParameters[index].ParameterType);
+                        ilGenerator.Emit(OpCodes.Stelem_Ref);
+                    }
+                }
+
+                ilGenerator.Emit(OpCodes.Ldtoken, baseType);
                 ilGenerator.Emit(OpCodes.Call, typeFromRuntimeHandle);
                 ilGenerator.Emit(OpCodes.Ldstr, methodInfo.Name);
+                ilGenerator.Emit(OpCodes.Ldloc, 8);
                 ilGenerator.Emit(OpCodes.Call, getMethod);
                 ilGenerator.Emit(OpCodes.Stloc_1);
                 #endregion End Of Get info of base method 
