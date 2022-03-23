@@ -1,14 +1,16 @@
 ﻿using ProxyFactory.Core.Abstract;
 using ProxyFactoryCore.Abstract;
 using System;
+using System.Diagnostics;
 
-namespace ProxyFactoryCore.Impl
+namespace ProxyFactoryCore.Tests.TestClasses
 {
-    public class DefaultExceptionHandler : IExceptionHandler
+    public class TestExceptionHandler : IExceptionHandler
     {
+
         public void OnException(Exception ex, IInvocationInfo invocationInfo)
         {
-            throw ex;
+            Debug.Assert(true);
         }
     }
 }

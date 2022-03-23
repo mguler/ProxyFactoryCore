@@ -7,6 +7,7 @@ namespace ProxyFactoryCore.Abstract
     public interface IInterceptorConfiguration
     {
         Type[] GetInterceptors(MethodInfo methodInfo);
+        Type GetExceptionHandler(MethodInfo methodInfo);
     }
     public interface IInterceptorConfiguration<T> : IInterceptorConfiguration
     {
@@ -18,6 +19,6 @@ namespace ProxyFactoryCore.Abstract
         IInterceptorConfiguration<T> Intercept<TResult>(Expression<Func<T, TResult>> expression);
         IInterceptorConfiguration<T> Intercept<TResult>(Expression<Action<T>> expression);
         IInterceptorConfiguration<T> UsingBuilder<TProxyBuilder>();
-
+        IInterceptorConfiguration<T> UseExceptionHandler<TExceptionHandler>() where TExceptionHandler : class, IExceptionHandler;
     }
 }

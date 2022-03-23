@@ -11,7 +11,10 @@ namespace ProxyFactoryCore.Impl
     {
         private readonly IDynamicProxyFactory _dynamicProxyFactory;
         private readonly Dictionary<MethodInfo, List<Type>> _cache = new Dictionary<MethodInfo, List<Type>>();
+        private readonly Dictionary<MethodInfo, Type> _exceptionHandlerCache = new Dictionary<MethodInfo, Type>();
+
         private List<Type> _currentInterceptorCache;
+        private MethodInfo _currentMethod;
 
         public Type Type { get => typeof(T); }
         public Type ProxyType { get; set; }
@@ -50,13 +53,35 @@ namespace ProxyFactoryCore.Impl
         {
             return null;
         }
+        public IInterceptorConfiguration<T> UseExceptionHandler<TExceptionHandler>() where TExceptionHandler : class, IExceptionHandler
+        {
+            if (!_exceptionHandlerCache.ContainsKey(_currentMethod))
+            {
+                _exceptionHandlerCache.Add(_currentMethod, typeof(TExceptionHandler));
+            }
+            else
+            {
+                _exceptionHandlerCache[_currentMethod] = typeof(TExceptionHandler);
+            }
+            return this;
+        }
+        public Type GetExceptionHandler(MethodInfo methodInfo)
+        {
+            if (!_exceptionHandlerCache.ContainsKey(methodInfo))
+            {
+                return null;
+            }
+            return _exceptionHandlerCache[methodInfo];
+        }
         public Type[] GetInterceptors(MethodInfo methodInfo)
         {
             var interceptorTypes = _cache.Keys.Contains(methodInfo) ? _cache[methodInfo].ToArray() : null;
             return interceptorTypes;
         }
+
         private void SetCurrentInterceptorCache(MethodInfo methodInfo)
         {
+            _currentMethod = methodInfo;
             _currentInterceptorCache = _cache.FirstOrDefault(interceptorCache => interceptorCache.Key == methodInfo).Value;
             if (_currentInterceptorCache == null)
             {

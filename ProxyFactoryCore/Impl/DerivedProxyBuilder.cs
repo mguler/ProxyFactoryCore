@@ -1,4 +1,5 @@
-﻿using ProxyFactoryCore.Abstract;
+﻿using ProxyFactory.Core.Abstract;
+using ProxyFactoryCore.Abstract;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,6 +45,8 @@ namespace ProxyFactoryCore.Impl
 
             var getItem = typeof(List<IInterceptor>).GetProperty("Item").GetGetMethod();
             var getCount = typeof(List<IInterceptor>).GetProperty("Count").GetGetMethod();
+            var invoke = typeof(MethodBase).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) });
+            var getType = typeof(object).GetMethod("GetType", Type.EmptyTypes);
 
             foreach (var methodInfo in methods)
             {
@@ -96,14 +99,17 @@ namespace ProxyFactoryCore.Impl
                 ilGenerator.DeclareLocal(typeof(object));
                 ilGenerator.DeclareLocal(typeof(Type[]));
 
-                var cancel = ilGenerator.DefineLabel();
+                //var cancel = ilGenerator.DefineLabel();
                 var bypassAfter = ilGenerator.DefineLabel();
                 var bypassBefore = ilGenerator.DefineLabel();
                 var loop1Begin = ilGenerator.DefineLabel();
                 var loop1IndexCheck = ilGenerator.DefineLabel();
                 var loop2Begin = ilGenerator.DefineLabel();
                 var loop2IndexCheck = ilGenerator.DefineLabel();
+                var endOfMethod = ilGenerator.DefineLabel();
                 var finish = ilGenerator.DefineLabel();
+
+                ilGenerator.BeginExceptionBlock();
 
                 /* Create Interceptor Cache */
                 ilGenerator.Emit(OpCodes.Newobj, interceptorCache);
@@ -119,7 +125,6 @@ namespace ProxyFactoryCore.Impl
                     ilGenerator.Emit(OpCodes.Call, addInterceptor);
                 }
                 #endregion End Of Create Interceptor Instances 
-
 
                 #region Get info of base method 
                 if (methodParameters.Any())
@@ -231,8 +236,8 @@ namespace ProxyFactoryCore.Impl
                 //Load 1 (true) into the stack
                 ilGenerator.Emit(OpCodes.Ldc_I4_1);
                 ilGenerator.Emit(OpCodes.Ceq);
-                //If isCancelled flag is set then jump to the cancel
-                ilGenerator.Emit(OpCodes.Brtrue, cancel);
+                //If isCancelled flag is set then jump to the finish
+                ilGenerator.Emit(OpCodes.Brtrue, finish);
 
                 //ilGenerator.Emit(OpCodes.Br, cancel);
                 #endregion End Of Check isCancelled Set
@@ -383,26 +388,103 @@ namespace ProxyFactoryCore.Impl
                 #endregion End Of Interceptor Invocation Loop2
 
                 ilGenerator.MarkLabel(bypassAfter);
+                ilGenerator.MarkLabel(finish);
+
+                ilGenerator.Emit(OpCodes.Leave, endOfMethod);
+
+                #region Catch Block
+
+                ilGenerator.BeginCatchBlock(typeof(Exception));
+
+                var exceptionHandler = config.GetExceptionHandler(methodInfo);
+
+                if (exceptionHandler == null)
+                {
+                    exceptionHandler = typeof(DefaultExceptionHandler);
+                }
+
+                ilGenerator.DeclareLocal(typeof(Exception));
+                ilGenerator.DeclareLocal(typeof(Type[]));
+                ilGenerator.DeclareLocal(typeof(Type));
+                ilGenerator.DeclareLocal(typeof(Type));
+                ilGenerator.DeclareLocal(typeof(MethodInfo));
+                ilGenerator.DeclareLocal(typeof(object));   //ExceptionHandler
+                ilGenerator.DeclareLocal(typeof(object[]));
+
+                //Store the exception instance
+                ilGenerator.Emit(OpCodes.Stloc, 9);
+
+                //Create an type array and store It
+                ilGenerator.Emit(OpCodes.Ldc_I4_2);
+                ilGenerator.Emit(OpCodes.Newarr, typeof(Type));
+                ilGenerator.Emit(OpCodes.Stloc, 10);
+
+                //Get exception type end store It
+                ilGenerator.Emit(OpCodes.Ldloc, 9);
+                ilGenerator.Emit(OpCodes.Call, getType);
+                ilGenerator.Emit(OpCodes.Stloc, 11);
+
+                //Set instance in array at index zero by exception type  
+                ilGenerator.Emit(OpCodes.Ldloc, 10);
+                ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                ilGenerator.Emit(OpCodes.Ldloc, 11);
+                ilGenerator.Emit(OpCodes.Stelem_Ref);
+
+                //Set instance in array at index zero by exception type  
+                ilGenerator.Emit(OpCodes.Ldloc, 10);
+                ilGenerator.Emit(OpCodes.Ldc_I4_1);
+                ilGenerator.Emit(OpCodes.Ldtoken, typeof(IInvocationInfo));
+                ilGenerator.Emit(OpCodes.Stelem_Ref);
+
+                //Store the ExceptionHandler type 
+                ilGenerator.Emit(OpCodes.Ldtoken, exceptionHandler);
+                ilGenerator.Emit(OpCodes.Call, typeFromRuntimeHandle);
+                ilGenerator.Emit(OpCodes.Stloc, 12);
+
+                //Try to get OnException method override with current exception as input parameter and store It
+                ilGenerator.Emit(OpCodes.Ldloc, 12);
+                ilGenerator.Emit(OpCodes.Ldstr, "OnException");
+                ilGenerator.Emit(OpCodes.Ldloc, 10);
+                ilGenerator.Emit(OpCodes.Call, getMethod);
+                ilGenerator.Emit(OpCodes.Stloc, 13);
+
+                ilGenerator.DeclareLocal(typeof(MethodInfo));
+                //Create the instance of ExceptionHandler and store It
+                var exceptionHandlerCtor = exceptionHandler.GetConstructors().FirstOrDefault();
+                ilGenerator.Emit(OpCodes.Newobj, exceptionHandlerCtor);
+                ilGenerator.Emit(OpCodes.Stloc, 14);
+
+                //Create and array for input parameters of ExceptionHandler specific override method
+                ilGenerator.Emit(OpCodes.Ldc_I4_2);
+                ilGenerator.Emit(OpCodes.Newarr, typeof(object));
+                ilGenerator.Emit(OpCodes.Stloc, 15);
+
+                //Set item at index zero by exception instance  
+                ilGenerator.Emit(OpCodes.Ldloc, 15);
+                ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                ilGenerator.Emit(OpCodes.Ldloc, 9);
+                ilGenerator.Emit(OpCodes.Stelem_Ref);
+
+                //Set item at index one by invocation info  
+                ilGenerator.Emit(OpCodes.Ldloc, 15);
+                ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                ilGenerator.Emit(OpCodes.Ldloc, 6);
+                ilGenerator.Emit(OpCodes.Stelem_Ref);
+
+                //Invoke the OnException method with the specific exception type as input parameter then jump to endOfCatch
+                ilGenerator.Emit(OpCodes.Ldloc, 13);
+                ilGenerator.Emit(OpCodes.Ldloc, 14);
+                ilGenerator.Emit(OpCodes.Ldloc, 15);
+                ilGenerator.Emit(OpCodes.Call, invoke);
+                ilGenerator.Emit(OpCodes.Leave, endOfMethod);
+                ilGenerator.EndExceptionBlock();
+
+                #endregion End Of Catch Block
+
+                ilGenerator.MarkLabel(endOfMethod);
 
                 ilGenerator.Emit(OpCodes.Ldloc_3);
                 ilGenerator.Emit(OpCodes.Call, getResult);
-
-                ilGenerator.Emit(OpCodes.Br, finish);
-
-                ilGenerator.MarkLabel(cancel);
-
-                ilGenerator.Emit(OpCodes.Ldloc, 6);
-
-                ilGenerator.MarkLabel(finish);
-
-                if (methodInfo.ReturnType == typeof(void))
-                {
-                    ilGenerator.Emit(OpCodes.Pop);
-                }
-                else if (methodInfo.ReturnType.IsPrimitive)
-                {
-                    ilGenerator.Emit(OpCodes.Unbox_Any, methodInfo.ReturnType);
-                }
 
                 ilGenerator.Emit(OpCodes.Ret);
 
