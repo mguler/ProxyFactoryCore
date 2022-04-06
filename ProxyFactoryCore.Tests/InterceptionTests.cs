@@ -18,7 +18,8 @@ namespace ProxyFactoryCore.Tests.InterceptionTests
                 .With<Interceptor2>()
                 .With<Interceptor3>()
                 .Intercept(type => type.Register(default, default, default))
-                .With<Interceptor4>();
+                .With<Interceptor4>()
+                .Intercept(type=>type.IsRegistered()).With<Interceptor4>();
 
             var employeeController = proxyFactory.Create<EmployeeController>();
             var result = employeeController.Register("new", 11, 33);

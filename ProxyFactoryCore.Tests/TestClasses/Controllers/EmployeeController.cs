@@ -11,8 +11,8 @@ namespace ProxyFactoryCore.Tests.InterceptionTests
         }
         public virtual bool Register(string name,int age,decimal salary)
         {
-            throw new Exception();
             return true;
         }
+        public virtual bool IsRegistered() => true;
     }
 }

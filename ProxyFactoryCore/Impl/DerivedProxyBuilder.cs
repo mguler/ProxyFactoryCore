@@ -127,12 +127,12 @@ namespace ProxyFactoryCore.Impl
                 #endregion End Of Create Interceptor Instances 
 
                 #region Get info of base method 
+                ilGenerator.Emit(OpCodes.Ldc_I4, methodParameters.Length);
+                ilGenerator.Emit(OpCodes.Newarr, typeof(Type));
+                ilGenerator.Emit(OpCodes.Stloc, 8);
+
                 if (methodParameters.Any())
                 {
-                    ilGenerator.Emit(OpCodes.Ldc_I4, methodParameters.Length);
-                    ilGenerator.Emit(OpCodes.Newarr, typeof(Type));
-                    ilGenerator.Emit(OpCodes.Stloc, 8);
-
                     for (var index = 0; index < methodParameters.Length; index++)
                     {
                         ilGenerator.Emit(OpCodes.Ldloc, 8);
