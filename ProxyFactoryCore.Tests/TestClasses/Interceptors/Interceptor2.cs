@@ -1,6 +1,8 @@
 ﻿using ProxyFactoryCore.Abstract;
 using ProxyFactoryCore.Impl;
 using System;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProxyFactoryCore.Tests.Interceptors
 {

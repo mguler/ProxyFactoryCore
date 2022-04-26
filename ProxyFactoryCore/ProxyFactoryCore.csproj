@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <ApplicationIcon />
     <StartupObject />
-    <Version>1.0.21</Version>
+    <Version>1.0.23</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Murat Güler</Authors>
   </PropertyGroup>
