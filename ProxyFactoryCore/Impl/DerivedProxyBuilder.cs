@@ -156,9 +156,9 @@ namespace ProxyFactoryCore.Impl
                 ilGenerator.Emit(OpCodes.Stloc_2);
                 /* Dictionary<string,object> oluştur ve değişkene ata */
 
-                for (int index = 0; index < methodParameters.Length; index++)
+                for (var index = 0; index < methodParameters.Length; index++)
                 {
-                    /* Dictionar<string,object>'i (parameters) stack'a yükle */
+                    /* Dictionary<string,object>'i (parameters) stack'a yükle */
                     ilGenerator.Emit(OpCodes.Ldloc_2);
 
                     /* parametre ismini stack a yükle */
@@ -167,14 +167,11 @@ namespace ProxyFactoryCore.Impl
                     /* index + 1 deki parametreyi stack'a yükle (metoda geçilen parametreler) */
                     ilGenerator.Emit(OpCodes.Ldarg, index + 1);
 
-                    //Primitif tip ise
-                    if (methodParameters[index].ParameterType.IsPrimitive)
-                    {
-                        //convert to value
-                        ilGenerator.Emit(OpCodes.Box, methodParameters[index].ParameterType);
-                    }
+                    //cast
+                    ilGenerator.Emit(OpCodes.Box, methodParameters[index].ParameterType);
+
                     //Dictinary.Add(Tkey,TValue) metodunu çağır
-                    ilGenerator.Emit(OpCodes.Callvirt, addParameter);
+                    ilGenerator.Emit(OpCodes.Call, addParameter);
                 }
                 #endregion Collect Input Arguments Of Base Method and Push Them Into A Dictionary
 
@@ -289,7 +286,7 @@ namespace ProxyFactoryCore.Impl
                 #region Invoke the Base Method
                 //Load current instance "this"
                 ilGenerator.Emit(OpCodes.Ldarg_0);
-                //Load method parameter into the stack<
+                //Load method parameter into the stack
                 for (int index = 0; index < methodParameters.Length; index++)
                 {
                     //load input parameter at index + 1 into the stack
@@ -483,8 +480,11 @@ namespace ProxyFactoryCore.Impl
 
                 ilGenerator.MarkLabel(endOfMethod);
 
-                ilGenerator.Emit(OpCodes.Ldloc_3);
-                ilGenerator.Emit(OpCodes.Call, getResult);
+                if (methodInfo.ReturnType != typeof(void))
+                {
+                    ilGenerator.Emit(OpCodes.Ldloc_3);
+                    ilGenerator.Emit(OpCodes.Call, getResult);
+                }
 
                 ilGenerator.Emit(OpCodes.Ret);
 
