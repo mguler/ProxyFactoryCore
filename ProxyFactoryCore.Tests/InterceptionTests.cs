@@ -1,6 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ProxyFactoryCore.Impl;
 using ProxyFactoryCore.Tests.Interceptors;
+using ProxyFactoryCore.Tests.TestClasses;
+using System.Diagnostics;
 
 namespace ProxyFactoryCore.Tests.InterceptionTests
 {
@@ -80,5 +82,48 @@ namespace ProxyFactoryCore.Tests.InterceptionTests
             employeeController.CheckHeath();
         }
 
+        [TestMethod("Exception handler test")]
+        public void ExceptionHandler()
+        {
+            var proxyFactory = new DefaultProxyFactory();
+
+            proxyFactory.Register<EmployeeController>()
+                .Intercept<EmployeeController>(type => type.ThrowsException())
+                .With<Interceptor2>()
+                .UseExceptionHandler<TestExceptionHandler>();
+
+            var employeeController = proxyFactory.Create<EmployeeController>();
+            employeeController.ThrowsException();
+        }
+
+        [TestMethod("CustomException handler test")]
+        public void CustomExceptionHandler()
+        {
+            var proxyFactory = new DefaultProxyFactory();
+
+            proxyFactory.Register<EmployeeController>()
+                .Intercept<EmployeeController>(type => type.ThrowsCustomException())
+                .With<Interceptor2>()
+                .UseExceptionHandler<TestExceptionHandler>();
+
+            var employeeController = proxyFactory.Create<EmployeeController>();
+            employeeController.ThrowsCustomException();
+        }
+
+        [TestMethod("CustomException handler and returns value test")]
+        public void CustomExceptionHandlerAndReturnsValue()
+        {
+            var proxyFactory = new DefaultProxyFactory();
+
+            proxyFactory.Register<EmployeeController>()
+                .Intercept<EmployeeController>(type => type.ThrowsCustomExceptionThenReturnsValue())
+                .With<Interceptor2>()
+                .UseExceptionHandler<TestExceptionHandler>();
+
+            var employeeController = proxyFactory.Create<EmployeeController>();
+            dynamic result = employeeController.ThrowsCustomExceptionThenReturnsValue();
+            string s = result.Message;
+            Debug.Print(s);
+        }
     }
 }

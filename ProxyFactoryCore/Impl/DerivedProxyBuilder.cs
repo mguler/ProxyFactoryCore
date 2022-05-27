@@ -464,8 +464,8 @@ namespace ProxyFactoryCore.Impl
 
                 //Set item at index one by invocation info  
                 ilGenerator.Emit(OpCodes.Ldloc, 15);
-                ilGenerator.Emit(OpCodes.Ldc_I4_0);
-                ilGenerator.Emit(OpCodes.Ldloc, 6);
+                ilGenerator.Emit(OpCodes.Ldc_I4_1);
+                ilGenerator.Emit(OpCodes.Ldloc, 3);
                 ilGenerator.Emit(OpCodes.Stelem_Ref);
 
                 //Invoke the OnException method with the specific exception type as input parameter then jump to endOfCatch
