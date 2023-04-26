@@ -2,16 +2,12 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <ApplicationIcon />
     <StartupObject />
-    <Version>1.0.25</Version>
+    <Version>1.0.26</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Murat Güler</Authors>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Impl\DecoratorProxyBuilder.cs" />
-  </ItemGroup>
 
 </Project>

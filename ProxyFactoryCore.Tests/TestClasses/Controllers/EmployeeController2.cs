@@ -2,15 +2,16 @@
 
 namespace ProxyFactoryCore.Tests.TestClasses.Controllers
 {
-    public class EmployeeController
+    public class EmployeeController2
     {
-        public virtual bool Register(string name, int age, decimal salary)
+        public virtual bool Update(int id, string name, int age, decimal salary)
         {
             return true;
         }
-        public virtual bool Register(Employee employee)
+        public virtual bool Update(Employee employee)
         {
             return true;
         }
+
     }
 }

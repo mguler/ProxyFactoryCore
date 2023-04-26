@@ -1,21 +1,17 @@
-﻿using ProxyFactoryCore.Abstract;
-using ProxyFactoryCore.Impl;
-using System;
-using System.Diagnostics;
-using System.Linq;
+﻿using ProxyFactoryCore.Abstract.Factory;
 
-namespace ProxyFactoryCore.Tests.Interceptors
+namespace ProxyFactoryCore.Tests.TestClasses.Interceptors
 {
     public class Interceptor2 : IInterceptor
     {
-        public void AfterExecution(InvocationInfo invocationInfo)
+        public IInvocationInfo AfterExecution(IInvocationInfo invocationInfo)
         {
-            Console.WriteLine($"AFTER : {invocationInfo.Method.Name} ,{this.GetType().Name}");
+            return invocationInfo;
         }
 
-        public void BeforeExecution(InvocationInfo invocationInfo)
+        public IInvocationInfo BeforeExecution(IInvocationInfo invocationInfo)
         {
-            Console.WriteLine($"BEFORE : {invocationInfo.Method.Name} ,{this.GetType().Name}");
+            return invocationInfo;
         }
     }
 }
